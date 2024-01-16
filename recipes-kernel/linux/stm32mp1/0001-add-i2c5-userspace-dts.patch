@@ -1,0 +1,19 @@
+diff --git a/stm32mp157f-dk2.dts.ori b/stm32mp157f-dk2.dts
+index c07a360..c010473 100644
+--- a/arch/arm/boot/dts/stm32mp157f-dk2.dts
++++ b/arch/arm/boot/dts/stm32mp157f-dk2.dts
+@@ -161,3 +161,14 @@
+ 		vddio-supply = <&v3v3>;
+ 	};
+ };
++
++&i2c5 {
++	pinctrl-names = "default", "sleep";
++	pinctrl-0 = <&i2c5_pins_a>;
++	pinctrl-1 = <&i2c5_sleep_pins_a>;
++	i2c-scl-rising-time-ns = <185>;
++	i2c-scl-falling-time-ns = <20>;
++	clock-frequency = <100000>;
++	status = "okay";
++};
++
