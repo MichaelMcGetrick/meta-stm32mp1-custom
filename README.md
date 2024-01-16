@@ -14,7 +14,7 @@ Details of project implementation may be found here: <br>
 <ol>
 <li>
 Clone the STM32 BSP with <br>
-git clone -b mickledore https://github.com/STMicroelectronics/meta-st-stm32mp.git. <br>
+<b>git clone -b mickledore https://github.com/STMicroelectronics/meta-st-stm32mp.git.</b> <br>
 (NB: For the package to be compatible with the on board Murata Wifi Chip it is important to select the mickledore branch
 - the Wifi interface fails to be estabished with earlier versions such as dunfell.) <br>
 </li>
@@ -28,13 +28,13 @@ As indicated by STM, clone the STM32 BSP dependencies found at: <br>
 <br> 
 <li> 
 Clone the custom layer using: <br>
-   repo init -u https://github.com/MichaelMcGetrick/manifest.git <br> 
-   repo sync <br>
+   <b>repo init -u https://github.com/MichaelMcGetrick/manifest.git </b> <br>  
+   <b>repo sync </b><br>
 </li>   
 <br>
 <li> 
 In Yocto layers parent directory initialise build enviroment with: <br>
-   source poky/oe-init-build-env build-mp1 <br>
+   <b>source poky/oe-init-build-env build-mp1</b> <br>
 </li>
 <br>
 <li> 
@@ -55,7 +55,7 @@ Navigate to build-mp1/conf folder and ensure the followings layers are defined i
 
 <li> 
 Commence the build with <br>
-  bitbake custom-image
+  <b>bitbake custom-image</b>
 </li>
 <br>
 <br>
