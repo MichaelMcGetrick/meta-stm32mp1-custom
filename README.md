@@ -8,6 +8,8 @@ The custom layer provides functionality for WLAN using the onboard Murata 1DX ch
 The custom layer has been configured to use systemd / networkd and an I2C bus for use of the external peripheral RTC module DS3231.<br><br>
 Details of project implementation may be found here: <br>
 
+https://github.com/MichaelMcGetrick/meta-stm32mp1-custom.wiki.git
+
 
 ## Instructions for setting up the Custom Yocto Project
 
@@ -38,7 +40,7 @@ In Yocto layers parent directory initialise build enviroment with: <br>
 </li>
 <br>
 <li> 
-Navigate to build-mp1/conf folder and ensure the followings layers are defined in the BBLAYERS variable in bblayers.conf: <br>
+Navigate to build-mp1/conf folder and ensure the following layers are defined in the BBLAYERS variable in bblayers.conf: <br>
    BBLAYERS ?= " \ <br>
   /<i>layer-parent-dir</i>/poky/meta \ <br>
   /<i>layer-parent-dir</i>/poky/meta-poky \<br>
