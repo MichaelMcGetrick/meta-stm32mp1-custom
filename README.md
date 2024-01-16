@@ -15,7 +15,7 @@ Details of project implementation may be found here: <br>
 <li>
 Clone the STM32 BSP with <br>
 git clone -b mickledore https://github.com/STMicroelectronics/meta-st-stm32mp.git. <br>
-(NB: For the package to be compatible with the on board Murati Wifi Chip it is important to select the mickledore branch
+(NB: For the package to be compatible with the on board Murata Wifi Chip it is important to select the mickledore branch
 - the Wifi interface fails to be estabished with earlier versions such as dunfell.) <br>
 </li>
 <br>
@@ -38,17 +38,17 @@ In Yocto layers parent directory initialise build enviroment with: <br>
 </li>
 <br>
 <li> 
-Navigate to build-mp1/conf folder and define the BBLAYERS variable with the following in bblayers.conf: <br>
-   BBLAYERS ?= " \
-  /<layer-parent-dir>/poky/meta \ <br>
-  /<layer-parent-dir>poky/meta-poky \<br>
-  /<layer-parent-dir>/poky/meta-yocto-bsp \<br>
-  /<layer-parent-dir>/meta-openembedded/meta-oe \<br>
-  /<layer-parent-dir>/meta-openembedded/meta-python \<br>
-  /<layer-parent-dir>/meta-st-stm32mp \<br>
-  /<layer-parent-dir>/meta-stm32mp1-custom \<br>
+Navigate to build-mp1/conf folder and ensure the followings layers are defined in the BBLAYERS variable in bblayers.conf: <br>
+   BBLAYERS ?= " \ <br>
+  /<i>layer-parent-dir</i>/poky/meta \ <br>
+  /<i>layer-parent-dir</i>/poky/meta-poky \<br>
+  /<i>layer-parent-dir</i>/poky/meta-yocto-bsp \<br>
+  /<i>layer-parent-dir</i>/meta-openembedded/meta-oe \<br>
+  /<i>layer-parent-dir</i>/meta-openembedded/meta-python \<br>
+  /<i>layer-parent-dir</i>/meta-st-stm32mp \<br>
+  /<i>layer-parent-dir</i>/meta-stm32mp1-custom \<br>
   "<br>
-  where <layer-parent-dir> is the parent directory for Yocto layers.<br> 
+  where <i>layer-parent-dir</i> is the parent directory for Yocto layers.<br> 
 </li>
 <br>
 
