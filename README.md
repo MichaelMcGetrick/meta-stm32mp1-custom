@@ -51,8 +51,12 @@ Navigate to build-mp1/conf folder and ensure the following layers are defined in
   where <i>layer-parent-dir</i> is the parent directory for Yocto layers.<br> 
 </li>
 <br>
-
-
+<li> 
+Use the wpa_passphrase facility (as described in Section 2 of the wiki article  <br>
+https://github.com/MichaelMcGetrick/meta-stm32mp1-custom/wiki <br>
+to configure WLAN with your access credentials. 
+</li>
+<br>
 <li> 
 Commence the build with <br>
   <b>bitbake custom-image</b>
