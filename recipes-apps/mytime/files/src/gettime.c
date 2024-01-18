@@ -127,7 +127,7 @@ int main(int argc, char* argv[])   //argc: argument count (inc program name)
       	}
    
 	// Get the Date and Time:
-	int numReadings = 10;
+	int numReadings = 4;
 	int delay = 5;
 	for (int i = 0; i < numReadings; i++)
 	{
