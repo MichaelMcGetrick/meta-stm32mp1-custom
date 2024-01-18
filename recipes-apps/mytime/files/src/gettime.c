@@ -99,11 +99,11 @@ int main(int argc, char* argv[])   //argc: argument count (inc program name)
 	
 	
 	
-	if(I2C_DEV == "RTC")
+	if (strcmp (I2C_DEV,"RTC") == 0)
 	{
 		i2c_cl_addr = RTC_SLAVE_ADDR;
 	}
-	if(I2C_DEV == "EEPROM")
+	if (strcmp (I2C_DEV,"EEPROM") == 0)
 	{
 		i2c_cl_addr = EEPROM_SLAVE_ADDR;
 	}		
@@ -127,9 +127,17 @@ int main(int argc, char* argv[])   //argc: argument count (inc program name)
       	}
    
 	// Get the Date and Time:
-	get_DateTime();
-	usleep(500);
-	read_temp();
+	int numReadings = 10;
+	int delay = 5;
+	for (int i = 0; i < numReadings; i++)
+	{
+		if (i > 0)	
+			sleep (delay);
+		get_DateTime();
+		usleep(500);
+		read_temp();
+	}
+		
 	//Close device:
 	close_device();
 		
@@ -138,7 +146,7 @@ int main(int argc, char* argv[])   //argc: argument count (inc program name)
 
 void init_device(int addr)
 {
-	printf("Opening i2c device adapter...\n");
+	//printf("Opening i2c device adapter...\n");
 	//Open the device:
 	snprintf(filename,19,"/dev/i2c-%d", adapter_num);
 	file = open(filename, O_RDWR);
@@ -152,7 +160,7 @@ void init_device(int addr)
 		//Terminate program				
 		exit(1);
 	}	
-	printf("Opened I2C adaptor OK!\n");
+	//printf("Opened I2C adaptor OK!\n");
 	
 	//Set the address of required I2C client on bus:
 	if( ioctl(file,I2C_SLAVE,i2c_cl_addr) < 0 )
@@ -171,12 +179,12 @@ void init_device(int addr)
 int32_t read_data(char addr)
 {
 		
-	__u8 reg = 0x11; //MSB for temperature
+	//__u8 reg = 0x11; //MSB for temperature
 	//__u8 reg = 0x06;  //Year 
 	//__s32 res;
-	int32_t res;
 	
-	if(I2C_DEV == "RTC")
+	
+	if (strcmp (I2C_DEV,"RTC") == 0)
 	{
 		
 				
@@ -220,6 +228,7 @@ int32_t read_data(char addr)
 	 *
 	   
 	int len = NUM_RTC_REGS;  
+	int32_t res;
 	if( read(file,ds3231,len) != len )
 	{
 		//Error condition
@@ -243,7 +252,7 @@ int32_t read_data(char addr)
 
 		
    }
-   if(I2C_DEV == "EEPROM")
+   if (strcmp (I2C_DEV,"EEPROM") == 0)
    {
 		printf("Reading from EEPROM......\n");
 		
@@ -331,9 +340,8 @@ int32_t read_data(char addr)
 
 void write_data(char addr, char data)
 {
-	int32_t res;
-	
-	if(I2C_DEV == "RTC")
+		
+	if (strcmp (I2C_DEV,"RTC") == 0)
 	{
 		
 		int len = 2;
@@ -354,20 +362,20 @@ void write_data(char addr, char data)
 		
 		
 	}
-	if(I2C_DEV == "EEPROM")
+	if (strcmp (I2C_DEV,"EEPROM") == 0)
 	{
 		
-		char buf[10];
+		
 		
 		/*
+		char buf[10];
 		//Define control byte:
 		int RW_FLG = 0; //1: read; 0: write
 		int control = 0x57;
 		buf[0] =  (char)((control << 1) + RW_FLG);  
 		//printf("Control value after convert to char: 0x%x\n",buf[0]);
 		*/
-		int16_t address;
-		
+		//int16_t address;
 		//address = htons(3807);   //Change byte order
 		
 		
@@ -385,8 +393,8 @@ void write_data(char addr, char data)
 		}		
 		printf("Have written to i2c client OK!");
 		*/
-		char cntrl[2], addr[3],data[10];
-		cntrl[0] = CNTRL_WRITE;
+		char addr[3], data[10];
+		//cntrl[0] = CNTRL_WRITE;
 		
 		addr[0] = 0x00;
 		addr[1] = 0x00;
@@ -506,7 +514,7 @@ void get_DateTime()
 	char digit1, digit2;
 	char mask = 0xf;
 	
-	printf("RTC Date and Time:\n");
+	printf("\nRTC Date and Time:\n");
 		
 
 	//Get Day
@@ -546,9 +554,14 @@ void get_DateTime()
 	//Get Month
 	//Get first digit:
 	char month = get_month();
-	digit1 = month >> 4;
-	//Get second digit:
-	digit2 = month & mask;
+	digit1 = month & mask;
+	digit2 = 0;
+	//Check for bit 5:
+	if ( (month & (1 << 4)) > 0)
+	{
+	   digit2 = 10;	
+	}
+	month = digit1 + digit2;
 	switch (month)
 	{
 		case 0x1 :
@@ -630,37 +643,38 @@ void get_DateTime()
 void set_DateTime()
 {
 	//Set Year:
-	//23
+	//24
 	char d1 = 0x02;  //First digit
-	char d2 = 0x03;  //Second digit
+	char d2 = 0x04;  //Second digit
 	dt.Year = (d1 << 4) | d2;
 			
 	//Set Day
-	//04 ("wed")
-	dt.Day = 0x04;  //Synchronise with Sunday
+	//05 ("thur")
+	dt.Day = 0x05;  //Synchronise with Sunday
 	
 	//Set Date:
-	//20
-	d1 = 0x02;  //First digit
-	d2 = 0x07;  //Second digit
+	//18
+	d1 = 0x01;  //First digit
+	d2 = 0x08;  //Second digit
 	dt.Date = (d1 << 4) | d2;
 	
 	
 	//Set month:
-	//12
-	d1 = 0x01;  //First digit
-	d2 = 0x02;  //Second digit
-	dt.Month = (d1 << 4) | d2;
-	
+	//10
+	d1 = 0x01;  //Lower bits
+	d2 = 0x00;  //Upper bits
+	dt.Month = (d2 << 4) | d1;
+		
 	//Set hour (24 hr mode)
-	//17 
+	//19 
 	d1 = 0x01;  //First digit
-	d2 = 0x06;  //Second digit
+	d2 = 0x09;  //Second digit
 	dt.Hour = (d1 << 4) | d2;
 	
+	
 	//Set minute 
-	//0
-	d1 = 0x03;  //First digit
+	//05
+	d1 = 0x00;  //First digit
 	d2 = 0x05;  //Second digit
 	dt.Minute = (d1 << 4) | d2;
 	//dt.Minute = 0x19;
@@ -703,10 +717,10 @@ void read_temp (void)
 		
 	float frac = t_lower / 4.0;
 	float temp = t_upper + frac;
-	printf ("temp: %f \n",temp);
+	//printf ("temp: %.2f \n",temp);
 	
 	
-	printf ("\nThe Temperature is: %f\n C",temp);
+	printf ("The Temperature is: %.2f C\n",temp);
 
 }// read_temp
 
@@ -714,7 +728,7 @@ void read_temp (void)
 void close_device()
 {
 	close(file);
-	printf("\nClosed I2C adaptor OK!\n");
+	printf("\nClosed I2C adaptor OK\n");
 	
 }
 
