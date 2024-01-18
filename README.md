@@ -53,7 +53,7 @@ Navigate to build-mp1/conf folder and ensure the following layers are defined in
 <br>
 <li> 
 Use the wpa_passphrase facility (as described in Section 2 of the wiki article  <br>
-https://github.com/MichaelMcGetrick/meta-stm32mp1-custom/wiki <br>
+https://github.com/MichaelMcGetrick/meta-stm32mp1-custom/wiki/#wpa_pw <br>
 to configure WLAN with your access credentials. 
 </li>
 <br>
