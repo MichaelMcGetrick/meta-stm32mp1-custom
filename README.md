@@ -1,5 +1,5 @@
 ## Overview  
-The purpose of this repository is to build a custom Linux embedded image with required applications. The  <b>meta-stm32mp1-custom</b> repository provides a custom layer for the ST Microelectronics board support package (BSP) found at <br>
+The purpose of this repository is to build a custom Linux embedded image with custom applications. The  <b>meta-stm32mp1-custom</b> repository provides a custom layer for the ST Microelectronics board support package (BSP) found at <br>
 https://github.com/STMicroelectronics/meta-st-stm32mp. <br>
 Specifically, meta-stm32mp1-custom is configured for the STM32MP157f-dk2 board. <br>
 
@@ -52,7 +52,7 @@ Navigate to build-mp1/conf folder and ensure the following layers are defined in
 </li>
 <br>
 <li> 
-Use the wpa_passphrase facility (as described in Section 2 of the wiki article  <br>
+Use the wpa_passphrase facility (as described in Section 3.3 of the wiki article)  <br>
 https://github.com/MichaelMcGetrick/meta-stm32mp1-custom/wiki/#wpa_pw <br>
 to configure WLAN with your access credentials. 
 </li>
