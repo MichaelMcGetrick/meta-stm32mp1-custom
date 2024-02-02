@@ -25,6 +25,7 @@ IMAGE_INSTALL += "gettime spiapp"
 
 #Add kernel moodules:
 IMAGE_INSTALL:append = " kernel-modules"
+IMAGE_INSTALL:append = " mcp3008-mod"
 
 #Add required modules for Wifi
 DISTRO_FEATURES:append = " wifi"
