@@ -14,7 +14,7 @@ TARGET_CC_ARCH += "${LDFLAGS}"
 
 # Cross-compile source code
 do_compile() {
-    ${CC} -o spi_app spi_app.c
+    ${CC} -o spi_app spi_app.c mcp3008.c
 }
 
 # Create /usr/bin in rootfs and copy program to it
