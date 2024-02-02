@@ -150,6 +150,7 @@ void sys_delay()
 
 
 void run_test()  
+{
 	
 	//Open file for data:
 	 if (saveToFile)
@@ -159,7 +160,7 @@ void run_test()
 			printf("Error opening file -aborting program!\n");
 			exit(0);	 
 		 }
-    }
+ 	  }
  
 	
 	float data_val;
