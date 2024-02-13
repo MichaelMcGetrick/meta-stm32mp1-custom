@@ -41,12 +41,16 @@ The custom layer, meta-stm32mp1-custom, can be cloned using the commands: <br>
 </li>   
 <br>
 <li> 
-From the OpenLSTiinux parent directory, set up the build environemnt using: <br>
+From the OpenLSTiinux parent directory, set up the build environment using: <br>
+   <ul>
+   <li>
    <b>DISTRO=openstlinux-weston MACHINE=<stm32mp1> source layers/meta-st/scripts/envsetup.sh</b> 
-   <br>
+   </li>
+   <li>
    From the newly created build directory, run the command: <br>
    <b>bitbake-layers add-layer ../layers/meta-st/meta-stm32mp1-custom/</b>
-   
+   </li>
+   </ul>
 </li>
 <br>
 
