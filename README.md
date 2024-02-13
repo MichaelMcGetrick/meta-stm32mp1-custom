@@ -1,7 +1,8 @@
 ## Overview  
-The purpose of this repository is to build a custom Linux embedded image with custom applications. The  <b>meta-stm32mp1-custom</b> repository provides a custom layer for the ST Microelectronics OpenSTLinux Distribution.
-
-The custom layer has been configured to use Wifi connectivity, and enable I2C and SPI buses for driving external peripherals .<br><br>
+The purpose of this repository is to build a custom Linux embedded image with custom applications. The  <b>meta-stm32mp1-custom</b> repository provides a custom layer for the ST Microelectronics OpenSTLinux Distribution. Details can be found at: <br>
+https://wiki.st.com/stm32mpu/wiki/STM32MP1_Distribution_Package
+<br>
+The custom layer has been configured to use Wifi connectivity, the on-board graphics displlay unit, and enable I2C and SPI buses for driving external peripherals .<br><br>
 Details of project implementation may be found here: <br>
 https://github.com/MichaelMcGetrick/meta-stm32mp1-custom/wiki
 
@@ -18,29 +19,23 @@ Clone the OpenSTLinux Distro with <br>
 <br>
 <br> 
 <li> 
-Clone the custom layer using: <br>
+The custom layer, meta-stm32mp1-custom, can be cloned using the commands: <br>
    <b>repo init -u https://github.com/MichaelMcGetrick/manifest.git </b> <br>  
    <b>repo sync </b><br>
+   In line with ST reccommentations, locate the custom layer under folder <i>distro_par_dir</i>/layers/meta-st/ where <br>
+   <i>distro_par_dir</i> is the parent directory for OpenSTLinux distribution.
 </li>   
 <br>
 <li> 
-In Yocto layers parent directory initialise build enviroment with: <br>
-   <b>source poky/oe-init-build-env build-mp1</b> <br>
+From the OpenLSTiinux parent directory, set up the build environemnt using: <br>
+   <b><i>DISTRO=openstlinux-weston MACHINE=<stm32mp1> source layers/meta-st/scripts/envsetup.sh</i>1</b> <br>
+   From the newly created build directory, run the command: <br>
+   bitbake-layers add-layer ../layers/meta-st/meta-stm32mp1-custom/
+   
 </li>
 <br>
-<li> 
-Navigate to build-mp1/conf folder and ensure the following layers are defined in the BBLAYERS variable in bblayers.conf: <br>
-   BBLAYERS ?= " \ <br>
-  /<i>layer-parent-dir</i>/poky/meta \ <br>
-  /<i>layer-parent-dir</i>/poky/meta-poky \<br>
-  /<i>layer-parent-dir</i>/poky/meta-yocto-bsp \<br>
-  /<i>layer-parent-dir</i>/meta-openembedded/meta-oe \<br>
-  /<i>layer-parent-dir</i>/meta-openembedded/meta-python \<br>
-  /<i>layer-parent-dir</i>/meta-st-stm32mp \<br>
-  /<i>layer-parent-dir</i>/meta-stm32mp1-custom \<br>
-  "<br>
-  where <i>layer-parent-dir</i> is the parent directory for Yocto layers.<br> 
-</li>
+
+
 <br>
 <li> 
 Use the wpa_passphrase facility (as described in Section 3.3 of the wiki article)  <br>
@@ -50,7 +45,7 @@ to configure WLAN with your access credentials.
 <br>
 <li> 
 Commence the build with <br>
-  <b>bitbake custom-image</b>
+  <b>bitbake st-image-weston</b>
 </li>
 <br>
 <br>
