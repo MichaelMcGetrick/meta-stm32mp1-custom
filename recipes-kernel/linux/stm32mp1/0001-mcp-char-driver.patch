@@ -34,7 +34,7 @@ index 1b35d1724..8948a1bd1 100644
  obj-$(CONFIG_XILLYBUS_CLASS)	+= xillybus/
  obj-$(CONFIG_POWERNV_OP_PANEL)	+= powernv-op-panel.o
  obj-$(CONFIG_ADI)		+= adi.o
-+obj-$(CONFIG_MCP3008_DRIVER)	+= mcpdriver.o
++obj-$(CONFIG_MCP3008_DRIVER)	+= mcpdriver/
 diff --git a/drivers/char/mcpdriver/Kconfig b/drivers/char/mcpdriver/Kconfig
 new file mode 100644
 index 000000000..abdb032b4
