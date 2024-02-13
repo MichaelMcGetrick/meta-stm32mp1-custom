@@ -1,11 +1,7 @@
 ## Overview  
-The purpose of this repository is to build a custom Linux embedded image with custom applications. The  <b>meta-stm32mp1-custom</b> repository provides a custom layer for the ST Microelectronics board support package (BSP) found at <br>
-https://github.com/STMicroelectronics/meta-st-stm32mp. <br>
-Specifically, meta-stm32mp1-custom is configured for the STM32MP157f-dk2 board. <br>
+The purpose of this repository is to build a custom Linux embedded image with custom applications. The  <b>meta-stm32mp1-custom</b> repository provides a custom layer for the ST Microelectronics OpenSTLinux Distribution.
 
-The custom layer provides functionality for WLAN using the onboard Murata 1DX chip. Provision is also made for Dropbear SSH Server which is useful for performing file transfers during development activity using the scp facility.
-
-The custom layer has been configured to use systemd / networkd and an I2C bus for use of the external peripheral RTC module DS3231.<br><br>
+The custom layer has been configured to use Wifi connectivity, and enable I2C and SPI buses for driving external peripherals .<br><br>
 Details of project implementation may be found here: <br>
 https://github.com/MichaelMcGetrick/meta-stm32mp1-custom/wiki
 
@@ -13,18 +9,13 @@ https://github.com/MichaelMcGetrick/meta-stm32mp1-custom/wiki
 
 <ol>
 <li>
-Clone the STM32 BSP with <br>
-<b>git clone -b mickledore https://github.com/STMicroelectronics/meta-st-stm32mp.git.</b> <br>
-(NB: For the package to be compatible with the on board Murata Wifi Chip it is important to select the mickledore branch
-- the Wifi interface fails to be estabished with earlier versions such as dunfell.) <br>
+Clone the OpenSTLinux Distro with <br>
+<b>repo init -u https://github.com/STMicroelectronics/oe-manifest.git -b refs/tags/openstlinux-6.1-yocto-mickledore-mp1-v23.06.21
+</b>
+<br>
+<b>repo sync</b>
 </li>
 <br>
-<li>
-As indicated by STM, clone the STM32 BSP dependencies found at: <br>
- https://git.yoctoproject.org/poky <br>
- https://github.com/openembedded/meta-openembedded.git <br>
- selecting the mickledore branch. <br>
-</li> 
 <br> 
 <li> 
 Clone the custom layer using: <br>
