@@ -3,7 +3,7 @@ The purpose of this repository is to build a custom Linux embedded image with cu
 https://wiki.st.com/stm32mpu/wiki/STM32MP1_Distribution_Package
 <br>
 <br>
-The custom layer has been configured to use Wifi connectivity, the on-board graphics displlay unit, and enable I2C and SPI buses for driving external peripherals .<br><br>
+The custom layer has been configured to use Wifi connectivity, the on-board graphics display unit, and enable I2C and SPI buses for driving external peripherals .<br><br>
 Details of project implementation may be found here: <br>
 https://github.com/MichaelMcGetrick/meta-stm32mp1-custom/wiki
 <br>
@@ -13,10 +13,15 @@ https://github.com/MichaelMcGetrick/meta-stm32mp1-custom/wiki
 <ol>
 <li>
 Clone the OpenSTLinux Distro with <br>
+<ul>
+<li>
 <b>repo init -u https://github.com/STMicroelectronics/oe-manifest.git -b refs/tags/openstlinux-6.1-yocto-mickledore-mp1-v23.06.21
 </b>
-<br>
+</li>
+<li>
 <b>repo sync</b>
+</li>
+</ul>
 </li>
 <br>
 <br> 
@@ -37,9 +42,10 @@ The custom layer, meta-stm32mp1-custom, can be cloned using the commands: <br>
 <br>
 <li> 
 From the OpenLSTiinux parent directory, set up the build environemnt using: <br>
-   <b><i>DISTRO=openstlinux-weston MACHINE=<stm32mp1> source layers/meta-st/scripts/envsetup.sh</i>1</b> <br>
+   <b><i>DISTRO=openstlinux-weston MACHINE=<stm32mp1> source layers/meta-st/scripts/envsetup.sh</i>1</b> 
+   <br>
    From the newly created build directory, run the command: <br>
-   bitbake-layers add-layer ../layers/meta-st/meta-stm32mp1-custom/
+   <b>bitbake-layers add-layer ../layers/meta-st/meta-stm32mp1-custom/</b>
    
 </li>
 <br>
