@@ -41,7 +41,7 @@ The custom layer, meta-stm32mp1-custom, can be cloned using the commands: <br>
 </li>   
 <br>
 <li> 
-From the OpenLSTiinux parent directory, set up the build environment using: <br>
+From the OpenLSTLinux parent directory, set up the build environment using: <br>
    <ul>
    <li>
    <b>DISTRO=openstlinux-weston MACHINE=<stm32mp1> source layers/meta-st/scripts/envsetup.sh</b> 
