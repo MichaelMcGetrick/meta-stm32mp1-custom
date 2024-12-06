@@ -1,7 +1,35 @@
 /* --------------------------------------------------------------------------------------------
- * TEST PROGRAM TO RUN DS3231 FROM USER SPACE
- * 
- * 
+ * TEST PROGRAM TO RUN DS3231(RTC) FROM USER SPACE
+   Author: Michael McGetrick
+ * --------------------------------------------------------------------------------------------
+ * The program can be run in three modes:
+ 
+   RTC_CLOCK: 
+   The program will run to show current RTC time for a specific interval of time. 
+   The user has the opportunity to reset the time on initial startup if required.
+   
+   SQUARE_WAVE:
+   If configured for SQUARE_WAVE the SQW pin will output a square wave. The user can configure for:
+   1 Hz
+   1.024kHz
+   4.096kHz
+   8.192kHz
+   
+   ALARM_TRIGGER:
+   The RTC is configured to trigger an interrupt on SQW pin after a certain time period. In this mode,
+   the SQW falls from HIGH to LOW when the alarm condition is met.
+   This mode can be realised in two ways:
+   i) The alarm condition is detected by user the status register of the DS3231 device
+   ii) GPIO pin PA8 on the STM32MP1 is wired to RTC SQW and configured as an interrupt pin to detect the
+       alarm condition. This is performed by use of the Linux Kernel module  alarm_driver.ko.
+       The driver will send a signal to the user app when a trigger event has been detected.
+       To use this method, the kernel module must be inserted in the kernel using the command
+       
+       $> modprobe alarm_driver
+       
+       before instantiating the user application.
+         
+   
  * 
  *  -------------------------------------------------------------------------------------------*/
 
@@ -13,90 +41,109 @@
 #include <stdbool.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
-#include <linux/i2c-dev.h>
+#include <linux/gpio.h>
+#include <signal.h>
+#include "rtc.h"
+#include "i2c.h"
 
-#define NUM_RTC_REGS 19    //Number of registers provided by DS3231 - RTC 
-char ds3231[NUM_RTC_REGS] = {0};
-#define EEPROM_SIZE 4000 //1024    //Define the number of bytes in the EERPOM 
-char eeprom[EEPROM_SIZE] = {0};
-
-
-//Define I2c device to use
-#define I2C_DEV "RTC"  //RTC; EEPROM
-#define RTC_SLAVE_ADDR 0x68
-#define EEPROM_SLAVE_ADDR 0x57
-#define CNTRL_WRITE (EEPROM_SLAVE_ADDR << 1)
-#define CNTRL_READ (EEPROM_SLAVE_ADDR << 1) + 0x01
+// Enable this #define to enable an alarm interrupt from the gpio driver
+#define GPIO_CONFIG
 
 
-//RTC register addresses:
-#define RTC_YEAR 0x06
-#define RTC_MONTH 0x05
-#define RTC_DATE 0x04
-#define RTC_DAY 0x03
-#define RTC_HOUR 0x02
-#define RTC_MINUTE 0x01
-#define RTC_SECOND 0x00
-// TEMPERATURE register addresses
-#define TEMP_UPPER 0x11
-#define TEMP_LOWER 0x12
-
-
-//Define RTC Setting Structure:
-struct DateTime {
-	char Year;
-	char Month;
-	char Day;
-	char Date;
-	char Hour;
-	char Minute;
-	char Second;
-};	
-
-struct DateTime dt;
+// GPIO CONTROL ATTRIBUTES -------------------------------------------------------------------------------------------------
+//IOCTL defines (for communication to kernel:
+#define REG_CURRENT_TASK _IOW('a','a',int32_t)  //We use this to give a user application registration request to the kernel
+#define SIGMJM  44    //Signal value to identity user app
+char chrdev_name[20];
+int fd, ret;
+int alarm_flg;
+//---------------------------------------------------------------------------------------------------------------------------
  
-int file;
-int adapter_num = 1; //Number of an existing h/w adapter (adapter is h/w relating to a specific i2c bus)
-					//This is best to be determined dynamically (can chnage from boot to boot)	
-
-char filename[20];
+ 
+// Define the test type
+char* test_type = "RTC_CLOCK"; //ALARM_TRIGGER"; //"RTC_CLOCK"; //"SQUARE_WAVE"
 
 //Declare i2c slave address:
 int i2c_cl_addr;
 
+void ctrl_c_handler(int sig);
 
 
-void init_device(int addr);
-int32_t read_data(char addr);
-void write_data(char addr, char data);
-void close_device(void);
-
-void get_DateTime(void);
-void set_DateTime(void);
-void set_year(char y);
-int32_t get_year(void);
-void set_month(char m);
-int32_t get_month(void);
-void set_hour(char h);
-int32_t get_hour(void);
-void set_minute(char m);
-int32_t get_minute(void);
-void set_second(char s);
-int32_t get_second(void);
-void set_date(char d);
-int32_t get_date(void);
-void set_day(char d);
-int32_t get_day(void);
-void read_temp (void);
+#ifdef GPIO_CONFIG
+//Callback function for processing signal from kernel
+void sig_event_handler(int n, siginfo_t *info,void *unused)
+{
+            
+      int check;
+      char buf;
+      if(n == SIGMJM)  //Check we have the right user id:
+      {
+         check = info->si_int;
+         //printf("Received signal from kernel: Value = %d\n",check);
+         alarm_flg = 1;
+               
+      } 
+      
+}// sig_event_handler   
+#endif
 
 
 
-
-
+// MAIN PROGRAM STARTS HERE
 int main(int argc, char* argv[])   //argc: argument count (inc program name)
 {                                  //argv: the argument vector array (ind program name)
+
+	
+#ifdef GPIO_CONFIG	
+   	   int32_t number;
+	   struct sigaction act;
+	   
+	   // Initialise alarm flag
+	   alarm_flg = 0;
+	   
+	   //Set up signal handler:
+	   //sigemptyset (&act.sa_mask);
+	   //act.sa_flags = (SA_SIGINFO | SA_RESTART);
+	   act.sa_flags = SA_SIGINFO;
+	   act.sa_sigaction = sig_event_handler;
+	   if( sigaction(SIGMJM,&act,NULL) == -1)
+	   {
+	      printf("Problem setting up signal handler for SIGMJM = %d\n",SIGMJM);
+	   }   
+	   else
+	   {
+	      printf("Signal handler for SIGMJM = %d  set up OK!\n" ,SIGMJM);   
+	   }   
+      
 	
 	
+	// Check the char device:
+	strcpy(chrdev_name, "/dev/rtc_alarm");
+	//Open alarm char device */
+	fd = open(chrdev_name, 0);
+	if (fd == -1) {
+		ret = -errno;
+		printf("Failed to open device\n");
+
+		return ret;
+	}
+	else
+	{
+		printf("Opened char device OK!\n");
+	}
+	
+	
+	
+	//Register this application with the kernel:
+	if( ioctl(fd, REG_CURRENT_TASK,(int32_t*) &number) < 0)
+	{
+	      printf("User registration with kernel module has failed\n");
+	      close(fd);
+	      exit(1);
+	}   
+	printf("User registration with kernel module SUCCESSFUL!\n");
+	
+#endif	   
 	
 	
 	if (strcmp (I2C_DEV,"RTC") == 0)
@@ -113,622 +160,201 @@ int main(int argc, char* argv[])   //argc: argument count (inc program name)
 	
 	//Initialise I2c adaptor 
 	init_device(i2c_cl_addr);	
-	
+
+
+	// Ensure status interrupt alarm bit is cleared to ensure we can trigger alarms
+	clear_alarm1Flg ();	
 		
+
+	
 	char ans;
-   
-      	printf("Do you want to set the date? (y/n): ");
-      	scanf("%c", &ans);
-      	if (ans == 'y')
+         	
+      	if (strcmp(test_type,"ALARM_TRIGGER") == 0)
       	{
+      			      	
+	      	// Set Alarm1 configuration:
+      	 	printf ("Setting Alarm1 Configuration ..\n");
+      		set_alarm1 ();
+      		printf ("Setting RTC ref. time ..\n");
       		set_DateTime();
-		usleep(500);
-      	
-      	}
-   
-	// Get the Date and Time:
-	int numReadings = 4;
-	int delay = 5;
-	for (int i = 0; i < numReadings; i++)
-	{
-		if (i > 0)	
-			sleep (delay);
-		get_DateTime();
-		usleep(500);
-		read_temp();
-	}
 		
-	//Close device:
-	close_device();
-		
-	
-}
-
-void init_device(int addr)
-{
-	//printf("Opening i2c device adapter...\n");
-	//Open the device:
-	snprintf(filename,19,"/dev/i2c-%d", adapter_num);
-	file = open(filename, O_RDWR);
-	if(file < 0)
-	{
-		//Error condition
-		printf("Failed to open the device driver...");
-		printf("The error number: %d",errno);
-		printf("Error description: %s",strerror(errno));
-		
-		//Terminate program				
-		exit(1);
-	}	
-	//printf("Opened I2C adaptor OK!\n");
-	
-	//Set the address of required I2C client on bus:
-	if( ioctl(file,I2C_SLAVE,i2c_cl_addr) < 0 )
-	{
-		//Error condition
-		printf("Failed to find the i2c client...");
-		printf("The error number: %d",errno);
-		printf("Error description: %s",strerror(errno));
-		//Terminate program				
-		exit(1);
-	}	
-	
-	
-}	
-
-int32_t read_data(char addr)
-{
-		
-	//__u8 reg = 0x11; //MSB for temperature
-	//__u8 reg = 0x06;  //Year 
-	//__s32 res;
-	
-	
-	if (strcmp (I2C_DEV,"RTC") == 0)
-	{
-		
+	      	
+		int num_triggers = 5;
+		for (int i=0;i< num_triggers;i++)
+		{
+			printf ("STARTING NEW ALARM TEST %d\n",i);
+			if (i > 0)
+			{				
+				usleep (1000000); // Leave a bit of time to see changes on scope
+				reset_alarm1 ();
+				usleep (100);
+			}
+			
+			int cnt = 1;
+			while (1)
+			{	
+				//printf ("Waiting for flag ...\n");
+				//char flg = rd_status_register ();
+				usleep (1000000);
 				
-			
-	//RANDOM READ METHOD
-	//Write the value of the address first
-	int len = 1;
-	if(write(file,&addr,len) != len )
-	{
-		printf("Failed to write address byte to i2c client...");
-		printf("The error number: %d",errno);
-		printf("Error description: %s",strerror(errno));
-		//Terminate program
-		close(file);
-		exit(1);
-	}		
-	//printf("Have written address to i2c client OK!");
-	
-	//Read the byte value at that point:
-	char buf[10];
-	if( read(file,buf,len) != len )
-	{
-		//Error condition
-		printf("Failed to read byte from i2c client...");
-		printf("The error number: %d",errno);
-		printf("Error description: %s",strerror(errno));
-		//Terminate program
-		close(file);
-		exit(1);	
-	}
-	//printf("Read data from  i2c client using read() - Ok\n");
-	return buf[0];
-	
-
-	
-	/* ---------------------------------------------------------
-	 * THIS CODE WIll READ DATA SEQUENTIALLY FROM THE RTC
-	 * IF AN ADDRESS IS NOT GIEN IT WILL READ FROM THE LAST
-	 * READ/WRITE POSITION. THIUS WIll BE AT 00xh IF WE HAVE STARTED
-	 * A NEW BUS SESSION
-	 *
-	   
-	int len = NUM_RTC_REGS;  
-	int32_t res;
-	if( read(file,ds3231,len) != len )
-	{
-		//Error condition
-		printf("Failed to read from i2c client...");
-		printf("The error number: %d",errno);
-		printf("Error description: %s",strerror(errno));
-		//Terminate program
-		close(file);
-		exit(1);	
-	}
-	printf("Read data from  i2c client using read() - Ok\n");
-	printf("Data read: \n");
-	for(int i=0;i<len;i++)
-	{
-			printf("%x  0x%x\n ", i,ds3231[i]);
-	}
-	 	
-	return res;
-	*/
-	
-
-		
-   }
-   if (strcmp (I2C_DEV,"EEPROM") == 0)
-   {
-		printf("Reading from EEPROM......\n");
-		
-		//Send a sixteen bit address command
-		//This is performed as a write operation for the EEPROM
-		
-		//Send a read command to read data at this point
-		//This is performed a s a read operationb# for the EEPROM
-			
-			char data[10];
-
-			//Define address (0x77):
-			char addr[3];
-			addr[0] = 0xf3;
-			addr[1] = 0xf3;
-			 
-			 
-			int len = 2;  
-			int i;
-			for(i =0;i<len;i++)
-			{
-				if( write(file,addr,1) != 1 )
+				
+#ifdef GPIO_CONFIG				
+				printf ("Cnt: %d\n",cnt);
+				if (alarm_flg)
 				{
-					//Error condition
-					printf("Failed to write address  i2c client...");
-					printf("The error number: %d",errno);
-					printf("Error description: %s",strerror(errno));
-					//Terminate program
-					close(file);
-					exit(1);	
+					printf ("Alarm flag has been triggered!\n");
+					alarm_flg = 0;
+					break;	
 				}
-				printf("Write required address to i2c client using wwrtie() - Ok\n");
-				printf("Data read: \n");
-				usleep(100);
-		    }
-			
-			//Read from this location:
-			if( read(file,data,1) != 1 )
-			{
-				//Error condition
-				printf("Failed to read from  i2c client...");
-				printf("The error number: %d",errno);
-				printf("Error description: %s",strerror(errno));
-				//Terminate program
-				close(file);
-				exit(1);
-			}	
-			printf("Data read from i2c client: 0x%x\n",data[0]);
-			
-		
-			/* ---------------------------------------------------------
-			 * THIS CODE WIll READ DATA SEQUENTIALLY FROM THE RTC
-			 * IF AN ADDRESS IS NOT GIEN IT WILL READ FROM THE LAST
-			 * READ/WRITE POSITION. THIUS WIll BE AT 00xh IF WE HAVE STARTED
-			 * A NEW BUS SESSION
-			 *
-			   
-			int len = EEPROM_SIZE;  
-			if( read(file,eeprom,len) != len )
-			{
-				//Error condition
-				printf("Failed to read from i2c client...");
-				printf("The error number: %d",errno);
-				printf("Error description: %s",strerror(errno));
-				//Terminate program
-				close(file);
-				exit(1);	
-			}
-			printf("Read data from  i2c client using read() - Ok\n");
-			printf("Data read: \n");
-			for(int i=0;i<len;i++)
-			{
-					printf("%d  %x  0x%x\n ", i, i,eeprom[i]);
-			}
-			 	
-			return res;
-			*/ 
-					
-					
-		
-   }	
-   	
-	
-}
-
-void write_data(char addr, char data)
-{
-		
-	if (strcmp (I2C_DEV,"RTC") == 0)
-	{
-		
-		int len = 2;
-		char buf[3];
-		buf[0] = addr; //Define address of register:
-		buf[1] = data;  //Define data byte
-		
-		if(write(file,buf,len) != len )
-		{
-			printf("Failed to write address byte to i2c client...");
-			printf("The error number: %d",errno);
-			printf("Error description: %s",strerror(errno));
-			//Terminate program
-			close(file);
-			exit(1);
-		}
-		
-		
-		
-	}
-	if (strcmp (I2C_DEV,"EEPROM") == 0)
-	{
-		
-		
-		
-		/*
-		char buf[10];
-		//Define control byte:
-		int RW_FLG = 0; //1: read; 0: write
-		int control = 0x57;
-		buf[0] =  (char)((control << 1) + RW_FLG);  
-		//printf("Control value after convert to char: 0x%x\n",buf[0]);
-		*/
-		//int16_t address;
-		//address = htons(3807);   //Change byte order
-		
-		
-		
-		/*
-		int len = 4;
-		if(write(file,buf,len) != len )
-		{
-			printf("Failed to write to i2c client...");
-			printf("The error number: %d",errno);
-			printf("Error description: %s",strerror(errno));
-			//Terminate program
-			close(file);
-			exit(1);
-		}		
-		printf("Have written to i2c client OK!");
-		*/
-		char addr[3], data[10];
-		//cntrl[0] = CNTRL_WRITE;
-		
-		addr[0] = 0x00;
-		addr[1] = 0x00;
-		
-		data[0] = 0x05;
-		
-					
-		//Write address:
-		if(write(file,&addr,2) != 2 )
-		{
-			printf("Failed to write to i2c client...");
-			printf("The error number: %d",errno);
-			printf("Error description: %s",strerror(errno));
-			//Terminate program
-			close(file);
-			exit(1);
-		}	
-		printf("Have written Address (MSB and LSB)!");
-		usleep(500);
-		//Write data byte:
-		if(write(file,&data,1) != 1 )
-		{
-			printf("Failed to write to i2c client...");
-			printf("The error number: %d",errno);
-			printf("Error description: %s",strerror(errno));
-			//Terminate program
-			close(file);
-			exit(1);
-		}	
-		printf("Have written data byte!");
-		
+#else				
 				
+				char flg = rd_status_register ();
+				printf ("Cnt: %d  Status register: 0x%X\n",cnt,flg);
+				if ((flg & 0x01) > 0)
+				{
+					printf ("Status register: 0x%X\n",flg);
+					printf ("Interrupt has been triggered!\n");
+					break;
 					
-	}	
-	
-	
-}//write_data	
-
-void set_year(char y)
-{
-	write_data(RTC_YEAR,y);
-}	
-int32_t get_year()
-{
-	int32_t year = read_data(RTC_YEAR);
-	return year;
-}
-
-
-void set_month(char m)
-{
-	write_data(RTC_MONTH,m);
-}	
-int32_t get_month()
-{
-	int32_t month = read_data(RTC_MONTH);
-	return month;
-}
-
-
-void set_day(char d)
-{
-	write_data(RTC_DAY,d);
-}	
-int32_t get_day()
-{
-	int32_t day = read_data(RTC_DAY);
-	return day;
-}
-
-
-void set_date(char d)
-{
-	write_data(RTC_DATE,d);
-}	
-int32_t get_date()
-{
-	int32_t date = read_data(RTC_DATE);
-	return date;
-}
-
-
-
-void set_hour(char h)
-{
-	write_data(RTC_HOUR,h);
-}	
-int32_t get_hour()
-{
-	int32_t hour = read_data(RTC_HOUR);
-	return hour;
-}
-
-void set_minute(char m)
-{
-	write_data(RTC_MINUTE,m);
-}	
-int32_t get_minute()
-{
-	int32_t min = read_data(RTC_MINUTE);
-	return min;
-}
-
-void set_second(char s)
-{
-	write_data(RTC_SECOND,s);
-}	
-int32_t get_second()
-{
-	int32_t sec = read_data(RTC_SECOND);
-	return sec;
-}
-
-
-void get_DateTime()
-{
-	char digit1, digit2;
-	char mask = 0xf;
-	
-	printf("\nRTC Date and Time:\n");
-		
-
-	//Get Day
-	switch (get_day())
-	{
-		case 1 :
-	      printf("%s","Sunday");	
-		break;
-		case 2 :
-	      printf("%s","Monday");	
-		break;
-		case 3 :
-	      printf("%s ","Tuesday");	
-		break;
-		case 4 :
-	      printf("%s","Wednesday");	
-		break;
-		case 5 :
-	      printf("%s","Thursday");	
-		break;
-		case 6 :
-	      printf("%s","Friday");	
-		break;
-		case 7 :
-	      printf("%s","Saturday");	
-		break;
-	}	
-	
-	//Get date:
-	char date = get_date();
-	//Get first digit:
-	digit1 = date >> 4;
-	//Get second digit:
-	digit2 = date & mask;
-	printf(", %d%d ",digit1, digit2);
-	
-	//Get Month
-	//Get first digit:
-	char month = get_month();
-	digit1 = month & mask;
-	digit2 = 0;
-	//Check for bit 5:
-	if ( (month & (1 << 4)) > 0)
-	{
-	   digit2 = 10;	
-	}
-	month = digit1 + digit2;
-	switch (month)
-	{
-		case 0x1 :
-	      printf("%s","January");	
-		break;
-		case 0x2 :
-	      printf("%s","February");	
-		break;
-		case 0x3 :
-	      printf("%s","March");	
-		break;
-		case 0x4 :
-	      printf("%s","April");	
-		break;
-		case 0x5 :
-	      printf("%s ","May");	
-		break;
-		case 0x6 :
-	      printf("%s","June");	
-		break;
-		case 0x7 :
-	      printf("%s","July");	
-		break;
-		case 0x8 :
-	      printf("%s","August");	
-		break;
-		case 0x9 :
-	      printf("%s","September");	
-		break;
-		case 0x0a :
-	      printf("%s","October");	
-		break;
-		case 0x0b :
-	      printf("%s","November");	
-		break;
-		case 0xc :
-	      printf("%s","December");	
-		break;
-	}
+				}
+				
+#endif				
+				
+				cnt = cnt + 1;
 			
-    //Get Year:
-    char year = get_year();
-	//Get first digit:
-	digit1 = year >> 4;
-	//Get second digit:
-	digit2 = year & mask;
-	
-	printf(", 20%d%d |",digit1,digit2);
-	
-	//Get Hour:
-	char hour = get_hour();
-	//Get first digit:
-	digit1 = hour >> 4;
-	//Get second digit:
-	digit2 = hour & mask;
-	//printf(" -- %d%d: ",digit1,digit2);
-	printf(" %d%d:",digit1,digit2);
-	
-	//Get minutes:
-	int8_t min = get_minute();
-	//Get first digit:
-	digit1 = min >> 4;
-	//Get second digit:
-	digit2 = min & mask;
-	printf("%d%d:",(int8_t) digit1, (int8_t) digit2);
-	
-	//Get seconds:
-	char sec = get_second();
-	//Get first digit:
-	digit1 = sec >> 4;
-	//Get second digit:
-	digit2 = sec & mask;
-	printf("%d%d\n",digit1,digit2);
-	
-	        
-}	
-
-
-void set_DateTime()
-{
-	//Set Year:
-	//24
-	char d1 = 0x02;  //First digit
-	char d2 = 0x04;  //Second digit
-	dt.Year = (d1 << 4) | d2;
+			}
+		}
 			
-	//Set Day
-	//05 ("thur")
-	dt.Day = 0x05;  //Synchronise with Sunday
-	
-	//Set Date:
-	//18
-	d1 = 0x01;  //First digit
-	d2 = 0x08;  //Second digit
-	dt.Date = (d1 << 4) | d2;
-	
-	
-	//Set month:
-	//10
-	d1 = 0x01;  //Lower bits
-	d2 = 0x00;  //Upper bits
-	dt.Month = (d2 << 4) | d1;
+		// Clear the alarm1 status bit and set INT/SQW to INACTIVE (HIGH)
+		char flg = rd_status_register ();
+		usleep(100);
+		flg = flg & 0xFE;
+		set_status_register (STATUS_REG,flg);
+		usleep (100);	
+			
+		//Close RTC device:
+		close_device();
 		
-	//Set hour (24 hr mode)
-	//19 
-	d1 = 0x01;  //First digit
-	d2 = 0x09;  //Second digit
-	dt.Hour = (d1 << 4) | d2;
-	
-	
-	//Set minute 
-	//05
-	d1 = 0x00;  //First digit
-	d2 = 0x05;  //Second digit
-	dt.Minute = (d1 << 4) | d2;
-	//dt.Minute = 0x19;
-	
-	//Set second 
-	//0
-	d1 = 0x00;  //First digit
-	d2 = 0x00;  //Second digit
-	dt.Second = (d1 << 4) | d2;
-	
-	
+#ifdef GPIO_CONFIG		
+		// Close char device:
+		close(fd);
+#endif		
 		
+	}// ALARM_TRIGGER_TEST	
 	
-	//Implement changes:
-	set_year(dt.Year);
-	usleep(100);
-	set_day(dt.Day);
-	usleep(100);
-	set_date(dt.Date);
-	usleep(100);
-	set_month(dt.Month);
-	usleep(100);
-        set_hour(dt.Hour);
-        usleep(100);
-        set_minute(dt.Minute);
-        usleep(100);
-       set_second(dt.Second);
-    
+	if (strcmp(test_type,"RTC_CLOCK") == 0)
+      	{
+      		
+      		// Set Alarm1 configuration:
+	      		      	
+	      	printf("Do you want to set the date? (y/n): ");
+	      	scanf("%c", &ans);
+	      	if (ans == 'y')
+	      	{
+	      		set_DateTime();
+			usleep(500);
+	      	
+	      	}
+	   
+				
+		
+		// Get the Date and Time:
+		int numReadings = 4;
+		int delay = 5;
+		for (int i = 0; i < numReadings; i++)
+		{
+			if (i > 0)	
+				sleep (delay);
+			//get_DateTime();
+			get_Alarm1Time();
+			usleep(500);
+			read_temp();
+		}
+			
+		//Close device:
+		close_device();
+      	
+	
+	 
+	}//RTC_CLOCK TEST
+	
+
+	if (strcmp(test_type,"SQUARE_WAVE") == 0)
+      	{
+      	
+		      	
+	      	// Set Square Wave Frequency:
+      	 	printf ("Enabling Square wave ...\n");
+      		enable_SQW (SQUARE_WAVE_4KHz);
+      		usleep (500);
+      		
+      		int num_secs = 100;
+      		//while (1)
+      		for (int i=0; i < num_secs; i++)
+      		{
+      			usleep (1000000);
+      			printf ("Secs: %d\n", i);
+      		}
+			
+		// Disable the square wave:
+		//Set the INTCNT bit:
+		char reg = rd_control_register ();
+		usleep (100);
+		reg = reg | (1 << 2);
+		
+		printf ("Disabling SQW  0x%0X\n",reg);
+		// Write to control register:
+		set_control_register (CONTROL_REG,reg);
+		usleep (100); 
+		
+			
+		//Close device:
+		close_device();
+		
+		
+	}// SQUARE_WAVE	
+	
+
+	
 }
 
 
-void read_temp (void)
+//NB: This handler is working for the CTL-C keyboard signal
+//	  This will exit the while loop sple (us):  1157
+//   to exit the program gracefully
+//	  (We need to close the connection to the serial terminal)
+void ctrl_c_handler(int sig)
 {
-
-	int32_t t_upper = read_data(TEMP_UPPER);
-	
-	int t_lower = read_data(TEMP_LOWER);
-	t_lower = t_lower >> 6;
+   if(sig == SIGINT) //Check it is the right user ID //NB: Not working at the moment
+   {
+         printf("\nWe have received the CTRL-C signal - aborting sample looping!\n");
+        
+        
+        if (strcmp(test_type,"SQUARE_WAVE") == 0)
+      	{
+		//Disable the Square wave:
+		
+		//Set the INTCNT bit:
+		char reg = rd_control_register ();
+		usleep (100);
+		reg = reg | (1 << 2);
+		
+		printf ("Edited control register  0x%0X\n",reg);
+		// Write to control register:
+		set_control_register (CONTROL_REG,reg);
+		usleep (100); 
 	
 		
-	float frac = t_lower / 4.0;
-	float temp = t_upper + frac;
-	//printf ("temp: %.2f \n",temp);
-	
-	
-	printf ("The Temperature is: %.2f C\n",temp);
+		// Close device
+		 close_device();
+	}
+         
+         //EXIT_PROGRAM = 1; //This will stop program
+         exit(0);
+   }
+   
+         
+}//ctrl_c_handler(int sig)
 
-}// read_temp
 
-
-void close_device()
-{
-	close(file);
-	printf("\nClosed I2C adaptor OK\n");
-	
-}
 

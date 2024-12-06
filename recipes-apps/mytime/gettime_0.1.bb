@@ -14,7 +14,7 @@ TARGET_CC_ARCH += "${LDFLAGS}"
 
 # Cross-compile source code
 do_compile() {
-    ${CC} -o gettime gettime.c
+    ${CC} -o gettime gettime.c i2c.c
 }
 
 # Create /usr/bin in rootfs and copy program to it
