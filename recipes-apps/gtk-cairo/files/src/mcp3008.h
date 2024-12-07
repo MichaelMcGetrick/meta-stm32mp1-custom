@@ -3,6 +3,7 @@
  *   Header file for building a shared library to be used by JNI for
  *   communicationg with the LKM (device driver) for the MCP3008 8-chanel
  *   Analog to digital converter.
+ 	AUTHOR: Michael McGetrick
  ----------------------------------------------------------------------*/ 
 #ifndef MCP3008_H
 #define MCP3008_H

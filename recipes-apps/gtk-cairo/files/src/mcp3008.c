@@ -1,7 +1,9 @@
 /*   MODULE: mcp33008.c ------------------------------------------------- 
  *   Source file for building a shared library to be used by JNI for
  *   communicationg with the LKM (device driver) for the MCP3008 8-channel
- *   analog to digital converter.   
+ *   analog to digital converter.
+ 	AUTHOR: Michael McGetrick   
+ *	
  ----------------------------------------------------------------------*/
 
 #include <stdio.h>
