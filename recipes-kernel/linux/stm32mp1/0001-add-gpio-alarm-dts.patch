@@ -1,0 +1,20 @@
+diff --git a/stm32mp157f-dk2.dts.ori b/stm32mp157f-dk2.dts
+index c07a360..a951231 100644
+--- a/arch/arm/boot/dts/stm32mp157f-dk2.dts
+--- b/arch/arm/boot/dts/stm32mp157f-dk2.dts
+@@ -39,6 +39,15 @@
+ 		compatible = "mmc-pwrseq-simple";
+ 		reset-gpios = <&gpioh 4 GPIO_ACTIVE_LOW>;
+ 	};
++	
++	alarm_device {
++   		compatible = "mjm,rtcalarm";
++   		status = "okay";
++   		ledpin-gpios = <&gpioa 14 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>;
++   		alarmpin-gpios = <&gpioa 8 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>;
++	};
++	
++	
+ };
+ 
+ &cryp1 {
