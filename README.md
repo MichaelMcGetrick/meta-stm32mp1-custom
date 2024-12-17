@@ -51,8 +51,8 @@ From the OpenLSTLinux parent directory, set up the build environment using: <br>
    <b>bitbake-layers add-layer ../layers/meta-st/meta-stm32mp1-custom/</b>
    </li>
    <li>
-   Set the following parameters in the <build_dir>/conf/local.conf file: <br>
-   MACHINE = "stm32mp1"
+   Set the following parameters in the <i>build_dir</i>/conf/local.conf file: <br>
+   MACHINE = "stm32mp1" <br>
    DISTRO = "openstlinux-weston"
    </li>
    </ul>
@@ -67,7 +67,7 @@ https://github.com/MichaelMcGetrick/meta-stm32mp1-custom/wiki/#wpa_pw <br>
 to configure WLAN with your access credentials. 
 </li>
 <li> 
-Add the image install command:    <br>
+Add the image install command in the <i>build_dir</i>/conf/local.conf file: <br>
 IMAGE_INSTALL:append = " wpa-supplicant"
 </li>
 <br>
